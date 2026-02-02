@@ -1,0 +1,711 @@
+# AI Security Hooks - Blacklist Configuration
+# This file defines patterns for blocking and requiring confirmation on risky operations
+
+version: "1.0"
+
+# Rule categories
+categories:
+  kubernetes: "Kubernetes cluster and resource operations"
+  database: "Database destructive operations"
+  infrastructure: "Infrastructure and cloud provider operations"
+  git: "Git version control operations"
+  system: "System-level dangerous commands"
+  secrets: "Secret and credential exposure"
+  files: "Sensitive file access"
+  network: "Network and remote operations"
+  deployment: "Deployment and release operations"
+
+# Severity levels:
+# - CRITICAL: Immediate block, could cause catastrophic damage
+# - HIGH: Block by default, potential for significant damage
+# - MEDIUM: Require confirmation, could have unintended effects
+# - LOW: Log and allow, for audit purposes
+
+rules:
+  # ============================================
+  # KUBERNETES - CRITICAL (Block)
+  # ============================================
+  - id: k8s-cluster-delete
+    pattern: "kubectl\\s+delete\\s+cluster"
+    severity: CRITICAL
+    action: block
+    category: kubernetes
+    message: "Cluster deletion is blocked - this would destroy the entire cluster"
+
+  - id: k8s-namespace-delete-prod
+    pattern: "kubectl\\s+delete\\s+namespace\\s+(prod|production|kube-system)"
+    severity: CRITICAL
+    action: block
+    category: kubernetes
+    message: "Deleting critical namespaces is blocked"
+
+  - id: k8s-delete-all
+    pattern: "kubectl\\s+delete\\s+(--all|-A|[a-z-]+\\s+--all-namespaces|--all-namespaces)"
+    severity: CRITICAL
+    action: block
+    category: kubernetes
+    message: "Bulk deletion across namespaces is blocked"
+
+  - id: k8s-drain-cordon
+    pattern: "kubectl\\s+(drain|cordon|taint)"
+    severity: CRITICAL
+    action: block
+    category: kubernetes
+    message: "Node management operations are blocked"
+
+  - id: k8s-delete-critical-resources
+    pattern: "kubectl\\s+delete\\s+(node|pv|pvc|crd|clusterrole|clusterrolebinding|mutatingwebhookconfiguration|validatingwebhookconfiguration)"
+    severity: CRITICAL
+    action: block
+    category: kubernetes
+    message: "Deleting critical cluster resources is blocked"
+
+  - id: k8s-secret-exposure
+    pattern: "kubectl\\s+(get\\s+secret[^|]*-o\\s*(yaml|json)|describe\\s+secret|edit\\s+secret)"
+    severity: HIGH
+    action: block
+    category: secrets
+    message: "Secret exposure commands are blocked"
+
+  # ============================================
+  # DATABASE - CRITICAL (Block)
+  # ============================================
+  - id: db-drop-database
+    pattern: "DROP\\s+DATABASE"
+    severity: CRITICAL
+    action: block
+    category: database
+    message: "DROP DATABASE is blocked"
+    case_insensitive: true
+
+  - id: db-drop-table
+    pattern: "DROP\\s+TABLE"
+    severity: CRITICAL
+    action: block
+    category: database
+    message: "DROP TABLE is blocked"
+    case_insensitive: true
+
+  - id: db-truncate
+    pattern: "TRUNCATE"
+    severity: CRITICAL
+    action: block
+    category: database
+    message: "TRUNCATE is blocked"
+    case_insensitive: true
+
+  - id: db-delete-all
+    pattern: "DELETE\\s+FROM.*WHERE\\s+1\\s*=\\s*1"
+    severity: CRITICAL
+    action: block
+    category: database
+    message: "Mass DELETE is blocked"
+    case_insensitive: true
+
+  - id: redis-flush
+    pattern: "redis-cli\\s+(FLUSHALL|FLUSHDB)"
+    severity: CRITICAL
+    action: block
+    category: database
+    message: "Redis flush commands are blocked"
+
+  - id: mongo-drop
+    pattern: "mongo.*dropDatabase"
+    severity: CRITICAL
+    action: block
+    category: database
+    message: "MongoDB dropDatabase is blocked"
+
+  # ============================================
+  # INFRASTRUCTURE - CRITICAL (Block)
+  # ============================================
+  - id: terraform-destroy
+    pattern: "terraform\\s+destroy"
+    severity: CRITICAL
+    action: block
+    category: infrastructure
+    message: "Terraform destroy is blocked"
+
+  - id: terraform-auto-approve
+    pattern: "terraform\\s+apply\\s+.*-auto-approve"
+    severity: CRITICAL
+    action: block
+    category: infrastructure
+    message: "Terraform auto-approve is blocked"
+
+  - id: pulumi-destroy
+    pattern: "pulumi\\s+destroy"
+    severity: CRITICAL
+    action: block
+    category: infrastructure
+    message: "Pulumi destroy is blocked"
+
+  - id: aws-delete-cluster
+    pattern: "aws\\s+[a-z0-9-]+\\s+delete-(cluster|db-instance|db-cluster|bucket|stack)"
+    severity: CRITICAL
+    action: block
+    category: infrastructure
+    message: "AWS resource deletion is blocked"
+
+  - id: aws-terminate-instances
+    pattern: "aws\\s+ec2\\s+terminate-instances"
+    severity: CRITICAL
+    action: block
+    category: infrastructure
+    message: "AWS instance termination is blocked"
+
+  - id: aws-iam-delete
+    pattern: "aws\\s+iam\\s+delete-(user|role|policy)"
+    severity: CRITICAL
+    action: block
+    category: infrastructure
+    message: "AWS IAM deletion is blocked"
+
+  - id: aws-s3-destructive
+    pattern: "aws\\s+s3\\s+(rb|rm\\s+[^|]*--recursive)"
+    severity: CRITICAL
+    action: block
+    category: infrastructure
+    message: "AWS S3 bulk deletion is blocked"
+
+  - id: gcloud-delete
+    pattern: "gcloud\\s+[a-z-]+\\s+(delete|clusters\\s+delete|instances\\s+delete)"
+    severity: CRITICAL
+    action: block
+    category: infrastructure
+    message: "GCloud resource deletion is blocked"
+
+  - id: az-delete
+    pattern: "az\\s+[a-z-]+\\s+(delete|aks\\s+delete|vm\\s+delete)"
+    severity: CRITICAL
+    action: block
+    category: infrastructure
+    message: "Azure resource deletion is blocked"
+
+  # ============================================
+  # GIT - HIGH (Block)
+  # ============================================
+  - id: git-force-push
+    pattern: "git\\s+push\\s+[^|]*(--force|-f|--force-with-lease)"
+    severity: HIGH
+    action: block
+    category: git
+    message: "Force push is blocked"
+
+  - id: git-reset-hard-protected
+    pattern: "git\\s+reset\\s+--hard\\s+[\\w/-]*(main|master|production)"
+    severity: HIGH
+    action: block
+    category: git
+    message: "Hard reset on protected branches is blocked"
+
+  - id: git-branch-delete-protected
+    pattern: "git\\s+branch\\s+-D\\s+(main|master|production)"
+    severity: HIGH
+    action: block
+    category: git
+    message: "Deleting protected branches is blocked"
+
+  # ============================================
+  # SYSTEM - CRITICAL (Block)
+  # ============================================
+  - id: system-rm-root
+    pattern: "rm\\s+(-[rRfvi]+\\s+)*(/|/\\*|~|\\$HOME|\\*)"
+    severity: CRITICAL
+    action: block
+    category: system
+    message: "Destructive rm command is blocked"
+
+  - id: system-rm-root-longflags
+    pattern: "rm\\s+(--recursive|--force|--verbose|--interactive|\\s+)+(/|/\\*|~|\\$HOME|\\*)"
+    severity: CRITICAL
+    action: block
+    category: system
+    message: "Destructive rm command is blocked"
+
+  - id: system-rm-split-flags
+    pattern: "rm\\s+(-[rR]\\s+-[fF]|-[fF]\\s+-[rR])\\s+(/|/\\*|~|\\$HOME|\\*)"
+    severity: CRITICAL
+    action: block
+    category: system
+    message: "Destructive rm command is blocked"
+
+  - id: system-sudo-rm
+    pattern: "sudo\\s+rm\\s+(-[rRfvi]+|--recursive|--force)"
+    severity: CRITICAL
+    action: block
+    category: system
+    message: "Privileged rm is blocked"
+
+  - id: system-chmod-777
+    pattern: "chmod\\s+(-R\\s+)?0?777"
+    severity: HIGH
+    action: block
+    category: system
+    message: "chmod 777 is blocked - insecure permissions"
+
+  - id: system-chmod-symbolic-world-writable
+    pattern: "chmod\\s+(-R\\s+)?(a=rwx|ugo=rwx|a\\+rwx|ugo\\+rwx|o\\+w)"
+    severity: HIGH
+    action: block
+    category: system
+    message: "World-writable permissions are blocked"
+
+  - id: system-mkfs
+    pattern: "mkfs"
+    severity: CRITICAL
+    action: block
+    category: system
+    message: "Filesystem formatting is blocked"
+
+  - id: system-dd-zero
+    pattern: "dd\\s+if=/dev/zero"
+    severity: CRITICAL
+    action: block
+    category: system
+    message: "dd disk wiping is blocked"
+
+  - id: system-curl-pipe
+    pattern: "(curl|wget)[^|]*\\|\\s*(/bin/|/usr/bin/)?(sh|bash|zsh|ksh)"
+    severity: CRITICAL
+    action: block
+    category: system
+    message: "Piping downloads to shell is blocked"
+
+  - id: system-curl-process-sub
+    pattern: "(sh|bash|zsh)\\s+<\\((curl|wget)"
+    severity: CRITICAL
+    action: block
+    category: system
+    message: "Process substitution with downloads is blocked"
+
+  - id: system-curl-eval
+    pattern: "eval\\s+.*\\$\\((curl|wget)"
+    severity: CRITICAL
+    action: block
+    category: system
+    message: "Eval with downloads is blocked"
+
+  - id: system-curl-source
+    pattern: "(source|\\.)\\s+<\\((curl|wget)"
+    severity: CRITICAL
+    action: block
+    category: system
+    message: "Sourcing downloaded content is blocked"
+
+  - id: system-obfuscation-base64
+    pattern: "base64\\s+.*\\|\\s*(sh|bash|zsh|python|perl|ruby)"
+    severity: HIGH
+    action: block
+    category: system
+    message: "Obfuscated command execution via base64 is blocked"
+
+  - id: system-obfuscation-eval
+    pattern: "eval\\s+"
+    severity: HIGH
+    action: block
+    category: system
+    message: "Command execution via eval is blocked"
+
+  - id: system-obfuscation-process-sub
+    pattern: "(sh|bash|zsh)\\s+<\\("
+    severity: HIGH
+    action: block
+    category: system
+    message: "Process substitution is blocked"
+
+  - id: system-netcat-listen
+    pattern: "(nc|netcat|ncat)\\s+-l"
+    severity: HIGH
+    action: block
+    category: network
+    message: "Network listeners are blocked"
+
+  - id: system-kill-all
+    pattern: "(kill\\s+-9\\s+-1|killall|pkill\\s+-9)"
+    severity: HIGH
+    action: block
+    category: system
+    message: "Mass process killing is blocked"
+
+  - id: system-service-stop
+    pattern: "(systemctl|service)\\s+(stop|disable)"
+    severity: HIGH
+    action: block
+    category: system
+    message: "Service management is blocked"
+
+  - id: system-firewall-disable
+    pattern: "(iptables\\s+-[FX]|ufw\\s+disable)"
+    severity: CRITICAL
+    action: block
+    category: system
+    message: "Firewall manipulation is blocked"
+
+  - id: system-history-clear
+    pattern: "(history\\s+-[cw]|shred)"
+    severity: HIGH
+    action: block
+    category: system
+    message: "Evidence tampering is blocked"
+
+  - id: system-crontab-remove
+    pattern: "crontab\\s+-r"
+    severity: HIGH
+    action: block
+    category: system
+    message: "Crontab removal is blocked"
+
+  # ============================================
+  # SECRETS - HIGH (Block)
+  # ============================================
+  - id: secret-env-grep
+    pattern: "env\\s*\\|\\s*grep\\s+(-i\\s+)?(secret|password|token|key|api.?key)"
+    severity: HIGH
+    action: block
+    category: secrets
+    message: "Environment variable secret exposure is blocked"
+    case_insensitive: true
+
+  - id: secret-printenv
+    pattern: "printenv.*(SECRET|PASSWORD|TOKEN|API.?KEY)"
+    severity: HIGH
+    action: block
+    category: secrets
+    message: "printenv secret exposure is blocked"
+
+  - id: secret-echo-var
+    pattern: "echo\\s+\\$.*?(SECRET|PASSWORD|TOKEN|API.?KEY)"
+    severity: HIGH
+    action: block
+    category: secrets
+    message: "echo secret exposure is blocked"
+
+  - id: secret-cat-keys
+    pattern: "cat.*(id_rsa|id_ed25519|\\.pem|\\.key)"
+    severity: HIGH
+    action: block
+    category: secrets
+    message: "Private key exposure is blocked"
+
+  - id: secret-base64-decode
+    pattern: "base64\\s+(--decode|-d).*(SECRET|PASSWORD|TOKEN)"
+    severity: HIGH
+    action: block
+    category: secrets
+    message: "Base64 secret decoding is blocked"
+
+  - id: secret-helm-values
+    pattern: "helm\\s+get\\s+values.*--all"
+    severity: HIGH
+    action: block
+    category: secrets
+    message: "Helm values exposure is blocked"
+
+  # ============================================
+  # HELM - HIGH (Block in prod)
+  # ============================================
+  - id: helm-uninstall-prod
+    pattern: "helm\\s+(uninstall|delete).*--namespace\\s+(prod|production)"
+    severity: HIGH
+    action: block
+    category: deployment
+    message: "Helm uninstall in production is blocked"
+
+  - id: argocd-delete
+    pattern: "argocd\\s+app\\s+delete"
+    severity: HIGH
+    action: block
+    category: deployment
+    message: "ArgoCD app deletion is blocked"
+
+  - id: vault-destructive
+    pattern: "vault\\s+(delete|destroy)"
+    severity: HIGH
+    action: block
+    category: secrets
+    message: "Vault destructive operations are blocked"
+
+  # ============================================
+  # DOCKER - HIGH (Block)
+  # ============================================
+  - id: docker-prune-all
+    pattern: "docker\\s+(system|container|volume|image)\\s+prune\\s+(-a|-f)"
+    severity: HIGH
+    action: block
+    category: system
+    message: "Docker pruning is blocked"
+
+  # ============================================
+  # CONFIG TAMPERING - HIGH (Block)
+  # ============================================
+  - id: config-aws-set
+    pattern: "aws\\s+configure\\s+set"
+    severity: HIGH
+    action: block
+    category: secrets
+    message: "AWS credential modification is blocked"
+
+  - id: config-gcloud-token
+    pattern: "gcloud\\s+auth\\s+print-access-token"
+    severity: HIGH
+    action: block
+    category: secrets
+    message: "GCloud token exposure is blocked"
+
+  - id: config-npm-registry
+    pattern: "npm\\s+config\\s+set.*registry"
+    severity: HIGH
+    action: block
+    category: secrets
+    message: "NPM registry modification is blocked"
+
+  - id: config-pip-index
+    pattern: "pip\\s+config\\s+set.*index-url"
+    severity: HIGH
+    action: block
+    category: secrets
+    message: "Pip index modification is blocked"
+
+  # ============================================
+  # KUBERNETES - MEDIUM (Ask)
+  # ============================================
+  - id: k8s-prod-context
+    pattern: "kubectl.*--context.*(prod|production)"
+    severity: MEDIUM
+    action: ask
+    category: kubernetes
+    message: "Production context operation requires confirmation"
+
+  - id: k8s-prod-namespace
+    pattern: "kubectl.*(-n|--namespace)\\s+(prod|production)"
+    severity: MEDIUM
+    action: ask
+    category: kubernetes
+    message: "Production namespace operation requires confirmation"
+
+  - id: k8s-mutate
+    pattern: "kubectl\\s+(apply|create|patch|replace|set|scale|rollout|delete)"
+    severity: MEDIUM
+    action: ask
+    category: kubernetes
+    message: "Kubernetes mutation requires confirmation"
+
+  - id: k8s-exec
+    pattern: "kubectl\\s+exec"
+    severity: MEDIUM
+    action: ask
+    category: kubernetes
+    message: "Container exec requires confirmation"
+
+  - id: k8s-port-forward
+    pattern: "kubectl\\s+port-forward"
+    severity: MEDIUM
+    action: ask
+    category: kubernetes
+    message: "Port forwarding requires confirmation"
+
+  # ============================================
+  # HELM - MEDIUM (Ask)
+  # ============================================
+  - id: helm-operations
+    pattern: "helm\\s+(install|upgrade|rollback|uninstall)"
+    severity: MEDIUM
+    action: ask
+    category: deployment
+    message: "Helm operations require confirmation"
+
+  # ============================================
+  # TERRAFORM - MEDIUM (Ask)
+  # ============================================
+  - id: terraform-operations
+    pattern: "terraform\\s+(apply|plan|import|state)"
+    severity: MEDIUM
+    action: ask
+    category: infrastructure
+    message: "Terraform operations require confirmation"
+
+  # ============================================
+  # CLOUD CLI - MEDIUM (Ask)
+  # ============================================
+  - id: aws-operations
+    pattern: "^aws\\s+"
+    severity: MEDIUM
+    action: ask
+    category: infrastructure
+    message: "AWS operations require confirmation"
+
+  - id: gcloud-operations
+    pattern: "^gcloud\\s+"
+    severity: MEDIUM
+    action: ask
+    category: infrastructure
+    message: "GCloud operations require confirmation"
+
+  - id: az-operations
+    pattern: "^az\\s+"
+    severity: MEDIUM
+    action: ask
+    category: infrastructure
+    message: "Azure operations require confirmation"
+
+  # ============================================
+  # GIT - MEDIUM (Ask)
+  # ============================================
+  - id: git-push
+    pattern: "git\\s+push"
+    severity: MEDIUM
+    action: ask
+    category: git
+    message: "Git push requires confirmation"
+
+  - id: git-merge-rebase
+    pattern: "git\\s+(merge|rebase)"
+    severity: MEDIUM
+    action: ask
+    category: git
+    message: "Git merge/rebase requires confirmation"
+
+  - id: git-checkout-protected
+    pattern: "git\\s+checkout\\s+(main|master|production)"
+    severity: MEDIUM
+    action: ask
+    category: git
+    message: "Checkout to protected branch requires confirmation"
+
+  # ============================================
+  # DATABASE - MEDIUM (Ask)
+  # ============================================
+  - id: db-connect
+    pattern: "^(mysql|psql|mongo|redis-cli)"
+    severity: MEDIUM
+    action: ask
+    category: database
+    message: "Database connection requires confirmation"
+
+  # ============================================
+  # NETWORK - MEDIUM (Ask)
+  # ============================================
+  - id: network-ssh
+    pattern: "^(ssh|scp|rsync)"
+    severity: MEDIUM
+    action: ask
+    category: network
+    message: "Remote connection requires confirmation"
+
+  - id: network-curl-mutate
+    pattern: "curl\\s+-X\\s+(POST|PUT|DELETE|PATCH)"
+    severity: MEDIUM
+    action: ask
+    category: network
+    message: "HTTP mutation requires confirmation"
+
+  # ============================================
+  # DEPLOYMENT - MEDIUM (Ask)
+  # ============================================
+  - id: docker-push
+    pattern: "docker\\s+(push|tag)"
+    severity: MEDIUM
+    action: ask
+    category: deployment
+    message: "Docker push/tag requires confirmation"
+
+  - id: package-publish
+    pattern: "(npm\\s+publish|pip\\s+upload|twine\\s+upload)"
+    severity: MEDIUM
+    action: ask
+    category: deployment
+    message: "Package publishing requires confirmation"
+
+  - id: argocd-operations
+    pattern: "^argocd\\s+"
+    severity: MEDIUM
+    action: ask
+    category: deployment
+    message: "ArgoCD operations require confirmation"
+
+  - id: vault-operations
+    pattern: "^vault\\s+"
+    severity: MEDIUM
+    action: ask
+    category: secrets
+    message: "Vault operations require confirmation"
+
+# File patterns for read/edit protection
+file_patterns:
+  block:
+    - pattern: "\\.env$"
+      category: secrets
+      message: "Environment files are protected"
+    - pattern: "\\.env\\."
+      category: secrets
+      message: "Environment files are protected"
+    - pattern: "secrets/"
+      category: secrets
+      message: "Secrets directory is protected"
+    - pattern: "credentials/"
+      category: secrets
+      message: "Credentials directory is protected"
+    - pattern: "\\.(pem|key|p12|pfx|jks)$"
+      category: secrets
+      message: "Cryptographic files are protected"
+    - pattern: "id_rsa|id_ed25519"
+      category: secrets
+      message: "SSH keys are protected"
+    - pattern: "kubeconfig"
+      category: secrets
+      message: "Kubeconfig files are protected"
+    - pattern: "terraform\\.tfstate"
+      category: infrastructure
+      message: "Terraform state is protected"
+    - pattern: "\\.tfvars$"
+      category: infrastructure
+      message: "Terraform variables are protected"
+    - pattern: "\\.(npmrc|pypirc|netrc)$"
+      category: secrets
+      message: "Package manager credentials are protected"
+    - pattern: "\\.docker/config\\.json$"
+      category: secrets
+      message: "Docker config is protected"
+    - pattern: "\\.aws/credentials$"
+      category: secrets
+      message: "AWS credentials are protected"
+    - pattern: "\\.kube/config$"
+      category: secrets
+      message: "Kubernetes config is protected"
+
+  ask:
+    - pattern: "k8s/|kubernetes/|manifests/"
+      category: kubernetes
+      message: "Kubernetes manifests require confirmation"
+    - pattern: "helm/|charts/"
+      category: kubernetes
+      message: "Helm charts require confirmation"
+    - pattern: "terraform/|infrastructure/"
+      category: infrastructure
+      message: "Infrastructure files require confirmation"
+    - pattern: "deploy/|deployment/"
+      category: deployment
+      message: "Deployment files require confirmation"
+    - pattern: "Dockerfile"
+      category: deployment
+      message: "Dockerfiles require confirmation"
+    - pattern: "\\.tf$"
+      category: infrastructure
+      message: "Terraform files require confirmation"
+    - pattern: "docker-compose.*\\.ya?ml$"
+      category: deployment
+      message: "Docker compose files require confirmation"
+    - pattern: "\\.github/workflows/"
+      category: deployment
+      message: "GitHub workflows require confirmation"
+    - pattern: "\\.gitlab-ci\\.yml$"
+      category: deployment
+      message: "GitLab CI config requires confirmation"
+    - pattern: "Jenkinsfile"
+      category: deployment
+      message: "Jenkinsfile requires confirmation"
+    - pattern: "prod/.*\\.ya?ml$|production/.*\\.ya?ml$"
+      category: deployment
+      message: "Production configs require confirmation"
+

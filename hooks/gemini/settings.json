@@ -1,0 +1,44 @@
+{
+  "_comment": "Gemini CLI hook configuration for Agent Security Hooks",
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "name": "agent-security-hooks",
+            "type": "command",
+            "command": "agent-security-hooks --platform gemini --event before",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "AfterTool": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "name": "agent-security-hooks-audit",
+            "type": "command",
+            "command": "agent-security-hooks --platform gemini --event after",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "name": "agent-security-hooks-session",
+            "type": "command",
+            "command": "agent-security-hooks --platform gemini --event session_start",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  }
+}

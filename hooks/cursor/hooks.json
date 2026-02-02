@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "_comment": "Cursor hook configuration for Agent Security Hooks",
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": "agent-security-hooks --platform cursor --event before-shell",
+        "timeout": 10
+      }
+    ],
+    "afterShellExecution": [
+      {
+        "command": "agent-security-hooks --platform cursor --event after-shell",
+        "timeout": 5
+      }
+    ],
+    "beforeReadFile": [
+      {
+        "command": "agent-security-hooks --platform cursor --event before-read",
+        "timeout": 5
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "agent-security-hooks --platform cursor --event after-edit",
+        "timeout": 5
+      }
+    ],
+    "beforeMCPExecution": [
+      {
+        "command": "agent-security-hooks --platform cursor --event before-mcp",
+        "timeout": 10
+      }
+    ],
+    "afterMCPExecution": [
+      {
+        "command": "agent-security-hooks --platform cursor --event after-mcp",
+        "timeout": 5
+      }
+    ],
+    "sessionStart": [
+      {
+        "command": "agent-security-hooks --platform cursor --event session-start",
+        "timeout": 5
+      }
+    ],
+    "sessionEnd": [
+      {
+        "command": "agent-security-hooks --platform cursor --event session-end",
+        "timeout": 5
+      }
+    ]
+  }
+}
