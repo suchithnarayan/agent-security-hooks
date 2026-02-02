@@ -321,6 +321,49 @@ Options:
 | `terraform.tfstate` | Infrastructure state |
 | `.npmrc`, `.pypirc` | Package credentials |
 
+### Known Limitations
+
+> **⚠️ Important:** This tool validates the **literal command string** passed to the hook. It cannot detect or prevent all bypass techniques.
+
+**Shell aliases** can bypass security controls. For example:
+
+```bash
+# If a user has this alias in their shell
+alias delete_everything='rm -rf /'
+
+# The hook sees "delete_everything", not "rm -rf /"
+# This would NOT be blocked
+delete_everything
+```
+
+**Other potential bypass vectors:**
+
+| Bypass | Example | Mitigation |
+|--------|---------|------------|
+| **Aliases** | `alias k='kubectl'` then `k delete cluster` | Add rules for common aliases |
+| **Shell functions** | `function rmd() { rm -rf "$@"; }` | Cannot be detected |
+| **Scripts** | `./my-script.sh` (contains dangerous commands) | Block unknown script execution |
+| **Indirect execution** | `xargs rm -rf` | Included in blacklist |
+| **Environment variables** | `$CMD` where CMD='rm -rf /' | Cannot be fully detected |
+
+**Recommendations:**
+
+1. **Audit your shell aliases** - Review `~/.bashrc`, `~/.zshrc` for dangerous aliases
+2. **Add custom rules** - Extend `blacklist.yaml` with aliases used in your environment
+3. **Defense in depth** - Use this tool alongside other security measures (RBAC, network policies, etc.)
+4. **Monitor audit logs** - Regularly review logs for suspicious patterns
+
+**🚀 Upcoming Enhancements:**
+
+We're actively working on advanced techniques to address these bypass vectors:
+
+- **Alias expansion** - Resolve shell aliases before validation by querying the user's shell configuration
+- **LLM-based semantic analysis** - Use language models to detect dangerous intent even when commands are obfuscated or aliased
+- **Script content scanning** - Analyze script files before execution to detect dangerous patterns
+- **Behavioral analysis** - Learn normal usage patterns and flag anomalies
+
+Stay tuned for updates. Contributions and ideas are welcome.
+
 ## Development
 
 ### Setup
