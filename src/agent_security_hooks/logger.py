@@ -161,7 +161,7 @@ class AuditLogger:
         Initialize the audit logger.
         
         Args:
-            log_dir: Directory for log files. Defaults to ~/.ai-security-hooks/logs/
+            log_dir: Directory for log files. Defaults to ~/.agent-security-hooks/logs/
             stderr_logging: If True, also log to stderr (useful for debugging).
             redact_secrets: If True, redact sensitive data from logs.
         """

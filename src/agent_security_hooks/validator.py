@@ -166,7 +166,7 @@ class SecurityValidator:
              raise PermissionError(
                  f"Config file {config_path} is insecure. "
                  f"It is writable by group or others (mode {oct(st.st_mode)[-3:]}). "
-                 f"Run 'chmod 600 {config_path}' to fix."
+                 f"Run 'chmod 644 {config_path}' to fix (readable by others for hooks, but not writable)."
              )
 
     def get_config_hash(self) -> str | None:

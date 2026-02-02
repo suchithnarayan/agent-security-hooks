@@ -22,7 +22,7 @@ import os
 import sys
 from typing import Any
 
-from ..validator import SecurityValidator, ValidationResult
+from ..validator import SecurityValidator
 from ..logger import AuditLogger, get_environment_context
 
 

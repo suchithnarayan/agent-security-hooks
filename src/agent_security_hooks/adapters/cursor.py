@@ -30,7 +30,7 @@ import os
 import sys
 from typing import Any
 
-from ..validator import SecurityValidator, ValidationResult
+from ..validator import SecurityValidator
 from ..logger import AuditLogger, get_environment_context
 
 
@@ -193,6 +193,8 @@ class CursorAdapter:
             **ctx,
         )
 
+        # Output JSON for consistency (post hooks always allow)
+        print("{}")
         return 0
 
     def _handle_before_read(self, input_data: dict) -> int:
@@ -227,6 +229,14 @@ class CursorAdapter:
             print(json.dumps(output))
             return 2
 
+        elif result.decision == "ask":
+            output = {
+                "permission": "deny",
+                "user_message": f"⚠️ Confirmation required: {result.reason}",
+            }
+            print(json.dumps(output))
+            return 2
+
         print("{}")
         return 0
 
@@ -245,6 +255,8 @@ class CursorAdapter:
             **ctx,
         )
 
+        # Output JSON for consistency (post hooks always allow)
+        print("{}")
         return 0
 
     def _handle_session(self, event_type: str, input_data: dict) -> int:
@@ -272,6 +284,7 @@ class CursorAdapter:
                 "continue": True,
             }
             print(json.dumps(output))
+            return 0
 
         else:  # session_end
             reason = input_data.get("reason", "")
@@ -284,6 +297,8 @@ class CursorAdapter:
                 duration_ms=duration_ms,
                 **ctx,
             )
+            # Output JSON for consistency
+            print("{}")
 
         return 0
 
